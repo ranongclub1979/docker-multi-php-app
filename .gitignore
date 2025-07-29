@@ -1,0 +1,28 @@
+# Docker related
+.dockerignore
+.env
+*.env
+*.env.*
+docker-compose.override.yml # ถ้ามีไฟล์ override
+*.log # ไฟล์ log ทั่วไป
+
+# PHP dependencies
+/vendor/ # โฟลเดอร์ Composer dependencies
+
+# Node.js dependencies (ถ้ามี)
+/node_modules/
+
+# IDE files
+.idea/
+.vscode/
+.DS_Store # macOS specific
+*.sublime-project
+*.sublime-workspace
+
+# Database data volumes
+/mysql_data/ # ถ้าคุณ mount volume ไปที่โฟลเดอร์ในโปรเจกต์โดยตรง
+# แต่ถ้าใช้ Named Volume (ตามที่เราทำ) ไม่จำเป็นต้องใส่ตรงนี้ เพราะมันอยู่นอกโฟลเดอร์โปรเจกต์แล้ว
+
+# Adminer specific (ถ้าคุณไม่ต้องการ commit ไฟล์ adminer.php)
+# project-a/src/adminer.php
+# project-b/src/adminer.php

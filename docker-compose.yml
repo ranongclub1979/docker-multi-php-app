@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # Nginx Service: ทำหน้าที่เป็น Web Server และ Reverse Proxy ตัวเดียวสำหรับทุกโปรเจกต์
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80" # Map พอร์ต 80 ของเครื่อง Mac ไปยังพอร์ต 80 ของ Nginx container
+    volumes:
+      # Mount โค้ด PHP ของ Project A เข้าไปยัง Nginx Container
+      - ./project-a/src:/var/www/project-a.test
+      # Mount โค้ด PHP ของ Project B เข้าไปยัง Nginx Container
+      - ./project-b/src:/var/www/project-b.test
+      # Mount Nginx configuration files
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro # Mount โฟลเดอร์ที่เก็บ Server Blocks
+    depends_on:
+      - php-a # Nginx ควรจะรอให้ php-a Service เริ่มทำงานก่อน
+      - php-b # Nginx ควรจะรอให้ php-b Service เริ่มทำงานก่อน
+
+  # PHP-FPM Service สำหรับ Project A
+  php-a:
+    build:
+      context: ./project-a/php # สร้าง Image จาก Dockerfile ใน project-a/php/
+    volumes:
+      # Mount โค้ด PHP ของ Project A เพื่อให้ PHP-FPM เข้าถึงได้
+      - ./project-a/src:/var/www/project-a.test
+    depends_on:
+      - mysql_db # PHP-FPM Service ควรจะรอให้ MySQL DB Service เริ่มทำงานก่อน (ถ้าโปรเจกต์นี้ใช้ DB)
+
+  # PHP-FPM Service สำหรับ Project B
+  php-b:
+    build:
+      context: ./project-b/php # สร้าง Image จาก Dockerfile ใน project-b/php/
+    volumes:
+      # Mount โค้ด PHP ของ Project B เพื่อให้ PHP-FPM เข้าถึงได้
+      - ./project-b/src:/var/www/project-b.test
+    # depends_on: # <-- คอมเมนต์ปิด depends_on สำหรับ Project B (ตามที่คุณต้องการ)
+    #   - mysql_db # PHP-FPM Service ควรจะรอให้ MySQL DB Service เริ่มทำงานก่อน (ถ้าโปรเจกต์นี้ใช้ DB)
+
+  # MySQL Database Service: Database Server ตัวเดียวสำหรับทุกโปรเจกต์
+  mysql_db:
+    image: mariadb:10.11 # ใช้ MariaDB 10.11 LTS
+    ports:
+      - "3306:3306" # Map พอร์ต 3306 ของเครื่อง Mac ไปยังพอร์ต 3306 ใน MySQL container
+    environment:
+      # รหัสผ่านสำหรับผู้ใช้ 'root' ของ MySQL (เปลี่ยนเป็นรหัสผ่านที่ปลอดภัย)
+      MYSQL_ROOT_PASSWORD: root
+      # ไม่ต้องระบุ MYSQL_DATABASE ตรงนี้ ถ้าจะสร้างหลาย DB ผ่าน init.sql
+    volumes:
+      # Persistent data: เก็บข้อมูล DB ไว้ใน named volume เพื่อไม่ให้ข้อมูลหายไป
+      - mysql_data:/var/lib/mysql
+      # Mount โฟลเดอร์ที่มี SQL scripts เพื่อ initial database (จะรันอัตโนมัติเมื่อ Container เริ่มครั้งแรก)
+      - ./db_init:/docker-entrypoint-initdb.d
+      
+# Volumes ที่ใช้สำหรับเก็บข้อมูลแบบ Persistent (ข้อมูลจะไม่หายไปเมื่อ Container ถูกลบ)
+volumes:
+  mysql_data:
